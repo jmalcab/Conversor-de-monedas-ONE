@@ -1,0 +1,95 @@
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.Scanner;
+
+public class Conversor {
+
+    private static final String API_KEY = "a512965abd56ae9deece2fff";
+    private static final String BASE_URL = "https://v6.exchangerate-api.com/v6/" + API_KEY + "/pair/";
+
+    public static void main(String[] args) {
+        Scanner teclado = new Scanner(System.in);
+        int opcion = 0;
+
+        while (opcion != 7) {
+            mostrarMenu();
+            opcion = teclado.nextInt();
+
+            if (opcion == 7) {
+                System.out.println("Finalizando el programa. ¡Hasta pronto!");
+                break;
+            }
+
+            procesarOpcion(opcion, teclado);
+        }
+        teclado.close();
+    }
+
+    private static void mostrarMenu() {
+        System.out.println("***************************************************");
+        System.out.println("Sea bienvenido/a al Conversor de Moneda");
+        System.out.println("1) Dólar => Peso argentino");
+        System.out.println("2) Peso argentino => Dólar");
+        System.out.println("3) Dólar => Real brasileño");
+        System.out.println("4) Real brasileño => Dólar");
+        System.out.println("5) Dólar => Peso colombiano");
+        System.out.println("6) Peso colombiano => Dólar");
+        System.out.println("7) Salir");
+        System.out.println("Elija una opción válida:");
+        System.out.println("***************************************************");
+    }
+
+    private static void procesarOpcion(int opcion, Scanner teclado) {
+        String monedaBase = "";
+        String monedaDestino = "";
+
+        switch (opcion) {
+            case 1: monedaBase = "USD"; monedaDestino = "ARS"; break;
+            case 2: monedaBase = "ARS"; monedaDestino = "USD"; break;
+            case 3: monedaBase = "USD"; monedaDestino = "BRL"; break;
+            case 4: monedaBase = "BRL"; monedaDestino = "USD"; break;
+            case 5: monedaBase = "USD"; monedaDestino = "COP"; break;
+            case 6: monedaBase = "COP"; monedaDestino = "USD"; break;
+            default:
+                System.out.println("Opción no válida. Intente nuevamente.");
+                return;
+        }
+
+        System.out.println("Ingrese el valor que deseas convertir:");
+        double cantidad = teclado.nextDouble();
+
+        realizarConversion(monedaBase, monedaDestino, cantidad);
+    }
+
+    private static void realizarConversion(String monedaBase, String monedaDestino, double cantidad) {
+        String direccion = BASE_URL + monedaBase + "/" + monedaDestino + "/" + cantidad;
+
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(direccion))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
+
+            if (jsonObject.get("result").getAsString().equals("success")) {
+                double resultado = jsonObject.get("conversion_result").getAsDouble();
+                System.out.printf("El valor %.2f [%s] corresponde al valor final de =>>> %.2f [%s]\n",
+                        cantidad, monedaBase, resultado, monedaDestino);
+            } else {
+                System.out.println("Error en la API: " + jsonObject.get("error-type").getAsString());
+            }
+
+        } catch (Exception e) {
+            System.out.println("Error de conexión o procesamiento: " + e.getMessage());
+        }
+    }
+}
